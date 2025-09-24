@@ -37,29 +37,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        checkBluetoothPermission()
-    }
-
-    private fun checkBluetoothPermission() {
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
-            != PackageManager.PERMISSION_GRANTED) {
-            requestBluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
-        }
-    }
-
-    private val requestBluetoothPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            if (isGranted) {
-                Log.d("TEST", "FINO")
-                val toast = Toast.makeText(this, "Bluetooth successfully enabled", Toast.LENGTH_SHORT)
-                toast.show()
-            } else {
-                Log.d("TEST", "F")
-                binding.btnPairModule.isEnabled = false
-            }
-    }
-
 }
