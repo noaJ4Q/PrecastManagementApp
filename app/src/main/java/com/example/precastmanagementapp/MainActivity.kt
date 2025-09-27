@@ -14,8 +14,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.precastmanagementapp.databinding.ActivityMainBinding
 
-private const val PERMISSION_REQUEST_CODE = 1
-
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
