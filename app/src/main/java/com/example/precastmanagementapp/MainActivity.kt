@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        binding.btnPairModule.setOnClickListener {
+        binding.cvPairScanner.setOnClickListener {
             val intent = Intent(this, PairActivity::class.java)
             startActivity(intent)
         }
