@@ -42,7 +42,6 @@ class ScanResultAdapter(
 
         fun bind(result: ScanResult) {
             view.findViewById<TextView>(R.id.tvDeviceName).text = result.device.name ?: "Unnamed"
-            view.findViewById<TextView>(R.id.tvDeviceMacAddress).text = result.device.address
             view.findViewById<TextView>(R.id.tvDeviceSignal).text = "${result.rssi} dBm"
             view.setOnClickListener { onclickListener.invoke(result) }
         }

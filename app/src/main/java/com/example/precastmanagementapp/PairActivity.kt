@@ -47,6 +47,8 @@ class PairActivity : AppCompatActivity() {
             insets
         }
 
+        binding.btnBackPairActivity.setOnClickListener { finish() }
+
         binding.btnScanDevices.setOnClickListener {
             if (isScanning){
                 stopBleScan()
