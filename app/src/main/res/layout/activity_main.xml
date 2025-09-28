@@ -60,7 +60,10 @@
             android:layout_marginBottom="20dp"
             android:background="@color/white"
             app:cardBackgroundColor="@color/white"
-            app:cardCornerRadius="12dp">
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardPreventCornerOverlap="false"
+            app:cardUseCompatPadding="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -93,7 +96,9 @@
             android:layout_height="wrap_content"
             android:background="@color/white"
             app:cardBackgroundColor="@color/white"
-            app:cardCornerRadius="12dp">
+            app:cardCornerRadius="12dp"
+            app:cardPreventCornerOverlap="false"
+            app:cardUseCompatPadding="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
