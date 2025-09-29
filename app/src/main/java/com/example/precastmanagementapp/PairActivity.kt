@@ -54,11 +54,12 @@ class PairActivity : AppCompatActivity() {
         binding.btnBackPairActivity.setOnClickListener { finish() }
 
         binding.btnRealoadScanDevices.setOnClickListener {
-            if (isScanning){
-                stopBleScan()
-            } else {
-                startBleScan()
-            }
+            stopBleScan()
+            startBleScan()
+        }
+
+        binding.imageView4.setOnClickListener {
+            readRfidId()
         }
 
         setupRecyclerView()
@@ -69,10 +70,15 @@ class PairActivity : AppCompatActivity() {
         if (!bluetoothAdapter.isEnabled) {
             promptEnableBluetooth()
         }
+        startBleScan()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopBleScan()
     }
 
     private fun startBleScan() {
-
         if (!hasRequiredBluetoothPermissions()) {
             requestRelevantRuntimePermissions()
         } else {
@@ -132,16 +138,37 @@ class PairActivity : AppCompatActivity() {
             }
         }
 
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int
+        ) {
+            val uuid = characteristic.uuid
+            when (status) {
+                BluetoothGatt.GATT_SUCCESS -> {
+                    val rfidId = value.first().toInt() and 0xFF
+                    Log.i("BluetoothGattCallback", "Read characteristic $uuid:n${value.toHexString()} | $rfidId")
+                }
+                BluetoothGatt.GATT_READ_NOT_PERMITTED -> {
+                    Log.e("BluetoothGattCallback", "Read not permitted for $uuid!")
+                }
+                else -> {
+                    Log.e("BluetoothGattCallback", "Characteristic read failed for $uuid, error: $status")
+                }
+            }
+        }
+
     }
 
     fun ByteArray.toHexString(): String =
         joinToString(separator = " ", prefix = "0x") { String.format("%02X", it) }
 
     private var isScanning = false
-        set(value) {
-            field = value
-            runOnUiThread { binding.btnRealoadScanDevices.text = if (value) "Stop Scan" else "Start scan" }
-        }
+//        set(value) {
+//            field = value
+//            runOnUiThread { binding.btnRealoadScanDevices.text = if (value) "Stop Scan" else "Start scan" }
+//        }
 
     private fun BluetoothGatt.printGattTable() {
         if (services.isEmpty()) {
@@ -154,6 +181,17 @@ class PairActivity : AppCompatActivity() {
                 prefix = "|--"
             ) { it.uuid.toString() }
             Log.i("printGattTable", "nService ${service.uuid}nCharacteristics:n$characteristicsTable")
+        }
+    }
+
+    private fun readRfidId() {
+        val rfidIdServiceUuid = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
+        val rfidIdCharUuid = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
+        val rfidIdChar = bluetoothGatt
+            .getService(rfidIdServiceUuid)?.getCharacteristic(rfidIdCharUuid)
+
+        if (rfidIdChar?.isReadable() == true) {
+            bluetoothGatt.readCharacteristic(rfidIdChar)
         }
     }
 
