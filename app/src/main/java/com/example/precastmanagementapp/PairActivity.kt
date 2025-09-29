@@ -40,7 +40,6 @@ class PairActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPairBinding
     private lateinit var bluetoothGatt: BluetoothGatt
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,7 +53,7 @@ class PairActivity : AppCompatActivity() {
 
         binding.btnBackPairActivity.setOnClickListener { finish() }
 
-        binding.btnScanDevices.setOnClickListener {
+        binding.btnRealoadScanDevices.setOnClickListener {
             if (isScanning){
                 stopBleScan()
             } else {
@@ -141,7 +140,7 @@ class PairActivity : AppCompatActivity() {
     private var isScanning = false
         set(value) {
             field = value
-            runOnUiThread { binding.btnScanDevices.text = if (value) "Stop Scan" else "Start scan" }
+            runOnUiThread { binding.btnRealoadScanDevices.text = if (value) "Stop Scan" else "Start scan" }
         }
 
     private fun BluetoothGatt.printGattTable() {
