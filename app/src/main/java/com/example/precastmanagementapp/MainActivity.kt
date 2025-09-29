@@ -29,10 +29,16 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        binding.cvScanTag.setOnClickListener {
+            val intent = Intent(this, ScanActivity::class.java)
+            startActivity(intent)
+        }
+
         binding.cvPairScanner.setOnClickListener {
             val intent = Intent(this, PairActivity::class.java)
             startActivity(intent)
         }
+
     }
 
 }
