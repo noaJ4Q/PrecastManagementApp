@@ -41,7 +41,7 @@ class ScanResultAdapter(
     ) : RecyclerView.ViewHolder(view) {
 
         fun bind(result: ScanResult) {
-            view.findViewById<TextView>(R.id.tvDeviceName).text = result.device.name ?: "Unnamed"
+            view.findViewById<TextView>(R.id.tvDeviceName).text = result.device.name ?: "Unnamed" + " - " + result.device.address
             view.findViewById<TextView>(R.id.tvDeviceSignal).text = "${result.rssi} dBm"
             view.setOnClickListener { onclickListener.invoke(result) }
         }

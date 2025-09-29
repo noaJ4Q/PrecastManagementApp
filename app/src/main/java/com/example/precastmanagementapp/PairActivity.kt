@@ -6,6 +6,7 @@ import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
@@ -15,6 +16,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,6 +30,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.example.precastmanagementapp.databinding.ActivityPairBinding
+import java.util.UUID
 
 private const val PERMISSION_REQUEST_CODE = 1
 
@@ -34,6 +38,7 @@ private const val PERMISSION_REQUEST_CODE = 1
 class PairActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPairBinding
+    private lateinit var bluetoothGatt: BluetoothGatt
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,7 +112,10 @@ class PairActivity : AppCompatActivity() {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     Log.w("BluetoothGattCallback", "Successfully connected to $deviceAddress")
-                    // TODO: Store a reference to BluetoothGatt
+                    bluetoothGatt = gatt
+                    Handler(Looper.getMainLooper()).post {
+                        bluetoothGatt?.discoverServices()
+                    }
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.w("BluetoothGattCallback", "Successfully disconnected from $deviceAddress")
                     gatt.close()
@@ -117,13 +125,38 @@ class PairActivity : AppCompatActivity() {
                 gatt.close()
             }
         }
+
+        override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            with (gatt) {
+                Log.w("BluetoothCallback", "Discovered ${services.size} services for ${device.address}")
+                printGattTable()
+            }
+        }
+
     }
+
+    fun ByteArray.toHexString(): String =
+        joinToString(separator = " ", prefix = "0x") { String.format("%02X", it) }
 
     private var isScanning = false
         set(value) {
             field = value
             runOnUiThread { binding.btnScanDevices.text = if (value) "Stop Scan" else "Start scan" }
         }
+
+    private fun BluetoothGatt.printGattTable() {
+        if (services.isEmpty()) {
+            Log.i("printGattTable", "No service and characteristic available, call discoverServices() first?")
+            return
+        }
+        services.forEach { service ->
+            val characteristicsTable = service.characteristics.joinToString(
+                separator = "n|--",
+                prefix = "|--"
+            ) { it.uuid.toString() }
+            Log.i("printGattTable", "nService ${service.uuid}nCharacteristics:n$characteristicsTable")
+        }
+    }
 
     private fun setupRecyclerView() {
         binding.rvScanResults.apply {
@@ -221,6 +254,7 @@ class PairActivity : AppCompatActivity() {
 
     private val scanSettings = ScanSettings.Builder()
         .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+        .setScanMode(ScanSettings.MATCH_MODE_STICKY)
         .build()
 
     private val bleScanner by lazy {
@@ -253,6 +287,19 @@ class PairActivity : AppCompatActivity() {
             Log.d("TEST", "BLUETOOTH IS NOT ENABLED")
             promptEnableBluetooth()
         }
+    }
+
+    fun BluetoothGattCharacteristic.isReadable(): Boolean =
+        containsProperty(BluetoothGattCharacteristic.PROPERTY_READ)
+
+    fun BluetoothGattCharacteristic.isWritable(): Boolean =
+        containsProperty(BluetoothGattCharacteristic.PROPERTY_WRITE)
+
+    fun BluetoothGattCharacteristic.isWritableWithoutResponse(): Boolean =
+        containsProperty(BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE)
+
+    fun BluetoothGattCharacteristic.containsProperty(property: Int): Boolean {
+        return properties and property != 0
     }
 
 }
