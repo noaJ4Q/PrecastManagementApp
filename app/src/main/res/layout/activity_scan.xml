@@ -46,4 +46,31 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnStartScanTag"
+        style="?attr/materialButtonElevatedStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:backgroundTint="@color/primary"
+        android:text="Start scan"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvTitleScanTag"
+        app:layout_constraintVertical_bias="0.0"
+        app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.Medium.Square" />
+
+    <com.google.android.material.loadingindicator.LoadingIndicator
+        android:id="@+id/liScanTag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="invisible"
+        app:indicatorColor="@color/primary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnStartScanTag" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

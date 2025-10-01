@@ -50,5 +50,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    implementation("com.google.android.material:material:1.5.0") // Material 3
+    implementation("com.google.android.material:material:1.14.0-alpha01") // Material 3
 }

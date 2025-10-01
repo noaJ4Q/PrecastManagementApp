@@ -76,7 +76,7 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:layout_gravity="center"
-                            tools:srcCompat="@drawable/icon_scan" />
+                            app:srcCompat="@drawable/icon_scan" />
 
                         <TextView
                             android:layout_width="match_parent"
@@ -127,7 +127,7 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:layout_gravity="center"
-                            tools:srcCompat="@drawable/icon_search" />
+                            app:srcCompat="@drawable/icon_search" />
 
                         <TextView
                             android:layout_width="match_parent"
@@ -179,7 +179,7 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:layout_gravity="center"
-                            tools:srcCompat="@drawable/icon_bluetooth" />
+                            app:srcCompat="@drawable/icon_bluetooth" />
 
                         <TextView
                             android:layout_width="match_parent"

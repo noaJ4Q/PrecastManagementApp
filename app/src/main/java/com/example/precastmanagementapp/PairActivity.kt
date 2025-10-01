@@ -185,8 +185,10 @@ class PairActivity : AppCompatActivity() {
     }
 
     private fun readRfidId() {
-        val rfidIdServiceUuid = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
-        val rfidIdCharUuid = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
+//        val rfidIdServiceUuid = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
+//        val rfidIdCharUuid = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
+        val rfidIdServiceUuid = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
+        val rfidIdCharUuid = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
         val rfidIdChar = bluetoothGatt
             .getService(rfidIdServiceUuid)?.getCharacteristic(rfidIdCharUuid)
 
