@@ -33,13 +33,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PrecastManagementApp">
         <activity
-            android:name=".ScanActivity"
+            android:name=".activities.ScanActivity"
             android:exported="false" />
         <activity
-            android:name=".PairActivity"
+            android:name=".activities.PairActivity"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

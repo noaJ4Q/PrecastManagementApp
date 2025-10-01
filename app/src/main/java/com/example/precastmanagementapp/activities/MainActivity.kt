@@ -1,17 +1,13 @@
-package com.example.precastmanagementapp
+package com.example.precastmanagementapp.activities
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.precastmanagementapp.R
+import com.example.precastmanagementapp.activities.ScanActivity
 import com.example.precastmanagementapp.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {

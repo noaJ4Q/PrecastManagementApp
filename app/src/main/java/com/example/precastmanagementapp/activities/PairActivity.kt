@@ -1,4 +1,4 @@
-package com.example.precastmanagementapp
+package com.example.precastmanagementapp.activities
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -12,7 +12,6 @@ import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -29,7 +28,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import com.example.precastmanagementapp.R
+import com.example.precastmanagementapp.ScanResultAdapter
 import com.example.precastmanagementapp.databinding.ActivityPairBinding
+import com.example.precastmanagementapp.extensions.hasPermission
+import com.example.precastmanagementapp.extensions.hasRequiredBluetoothPermissions
 import java.util.UUID
 
 private const val PERMISSION_REQUEST_CODE = 1
@@ -301,7 +304,7 @@ class PairActivity : AppCompatActivity() {
     }
 
     private val bluetoothAdapter: BluetoothAdapter by lazy {
-        val bluetoothAdapter = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothAdapter = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter.adapter
     }
 

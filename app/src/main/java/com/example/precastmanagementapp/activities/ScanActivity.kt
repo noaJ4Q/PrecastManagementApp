@@ -1,12 +1,12 @@
-package com.example.precastmanagementapp
+package com.example.precastmanagementapp.activities
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.precastmanagementapp.R
 import com.example.precastmanagementapp.databinding.ActivityScanBinding
 
 class ScanActivity : AppCompatActivity() {
@@ -52,11 +52,9 @@ class ScanActivity : AppCompatActivity() {
 
     private fun startRfidScan(){
         isScanningRfid = true
-        Log.d("TEST", "STARTING RFID...")
     }
 
     private fun stopRfidScan(){
         isScanningRfid = false
-        Log.d("TEST", "STOPING RFID...")
     }
 }
