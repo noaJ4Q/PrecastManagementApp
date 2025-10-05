@@ -1,5 +1,7 @@
 package com.example.precastmanagementapp.activities
 
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
@@ -8,6 +10,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.precastmanagementapp.R
 import com.example.precastmanagementapp.databinding.ActivityScanBinding
+import com.example.precastmanagementapp.extensions.isReadable
+import java.util.UUID
 
 class ScanActivity : AppCompatActivity() {
 
@@ -57,4 +61,5 @@ class ScanActivity : AppCompatActivity() {
     private fun stopRfidScan(){
         isScanningRfid = false
     }
+
 }

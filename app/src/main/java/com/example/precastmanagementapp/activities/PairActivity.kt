@@ -13,16 +13,13 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -30,9 +27,14 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.example.precastmanagementapp.R
 import com.example.precastmanagementapp.ScanResultAdapter
+import com.example.precastmanagementapp.ble.ConnectionManager
+import com.example.precastmanagementapp.ble.isReadable
+import com.example.precastmanagementapp.ble.printGattTable
+import com.example.precastmanagementapp.ble.toHexString
 import com.example.precastmanagementapp.databinding.ActivityPairBinding
-import com.example.precastmanagementapp.extensions.hasPermission
-import com.example.precastmanagementapp.extensions.hasRequiredBluetoothPermissions
+import com.example.precastmanagementapp.hasPermission
+import com.example.precastmanagementapp.hasRequiredBluetoothPermissions
+import com.example.precastmanagementapp.requestRelevantRuntimePermissions
 import java.util.UUID
 
 private const val PERMISSION_REQUEST_CODE = 1
@@ -41,6 +43,37 @@ private const val PERMISSION_REQUEST_CODE = 1
 class PairActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPairBinding
+
+    private val bluetoothAdapter: BluetoothAdapter by lazy {
+        val bluetoothAdapter = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter.adapter
+    }
+
+    private val bleScanner by lazy {
+        bluetoothAdapter.bluetoothLeScanner
+    }
+
+    private val scanSettings = ScanSettings.Builder()
+        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+        .setScanMode(ScanSettings.MATCH_MODE_STICKY)
+        .build()
+
+    private var isScanning = false
+    private val scanResults = mutableListOf<ScanResult>()
+    private val scanResultAdapter: ScanResultAdapter by lazy {
+        ScanResultAdapter(scanResults) { result ->
+            // User tapped on a scan result
+            if (isScanning) {
+                stopBleScan()
+            }
+            with(result.device) {
+                Log.w("ScanResultAdapter", "Connecting to $address")
+//                connectGatt(this@PairActivity, false, gattCallback)
+                ConnectionManager.connect(this, this@PairActivity)
+            }
+        }
+    }
+
     private lateinit var bluetoothGatt: BluetoothGatt
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,9 +116,8 @@ class PairActivity : AppCompatActivity() {
 
     private fun startBleScan() {
         if (!hasRequiredBluetoothPermissions()) {
-            requestRelevantRuntimePermissions()
+            requestRelevantRuntimePermissions(PERMISSION_REQUEST_CODE)
         } else {
-            Log.d("TEST", "PERFORMING SCAN...")
             scanResults.clear()
             scanResultAdapter.notifyDataSetChanged()
             bleScanner.startScan(null, scanSettings, scanCallback)
@@ -96,22 +128,6 @@ class PairActivity : AppCompatActivity() {
     private fun stopBleScan() {
         bleScanner.stopScan(scanCallback)
         isScanning = false
-    }
-
-    private val scanResults = mutableListOf<ScanResult>()
-
-    private val scanResultAdapter: ScanResultAdapter by lazy {
-        ScanResultAdapter(scanResults) { result ->
-            // User tapped on a scan result
-            if (isScanning) {
-                stopBleScan()
-            }
-            with(result.device) {
-                Log.w("ScanResultAdapter", "Connecting to $address")
-                connectGatt(this@PairActivity, false, gattCallback)
-            }
-
-        }
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -129,14 +145,20 @@ class PairActivity : AppCompatActivity() {
                     gatt.close()
                 }
             } else {
-                Log.w("BluetoothGattCallback", "Error $status encountered for $deviceAddress! Disconnecting...")
+                Log.w(
+                    "BluetoothGattCallback",
+                    "Error $status encountered for $deviceAddress! Disconnecting..."
+                )
                 gatt.close()
             }
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            with (gatt) {
-                Log.w("BluetoothCallback", "Discovered ${services.size} services for ${device.address}")
+            with(gatt) {
+                Log.w(
+                    "BluetoothCallback",
+                    "Discovered ${services.size} services for ${device.address}"
+                )
                 printGattTable()
             }
         }
@@ -151,40 +173,25 @@ class PairActivity : AppCompatActivity() {
             when (status) {
                 BluetoothGatt.GATT_SUCCESS -> {
                     val rfidId = value.first().toInt() and 0xFF
-                    Log.i("BluetoothGattCallback", "Read characteristic $uuid:n${value.toHexString()} | $rfidId")
+                    Log.i(
+                        "BluetoothGattCallback",
+                        "Read characteristic $uuid:n${value.toHexString()} | $rfidId"
+                    )
                 }
+
                 BluetoothGatt.GATT_READ_NOT_PERMITTED -> {
                     Log.e("BluetoothGattCallback", "Read not permitted for $uuid!")
                 }
+
                 else -> {
-                    Log.e("BluetoothGattCallback", "Characteristic read failed for $uuid, error: $status")
+                    Log.e(
+                        "BluetoothGattCallback",
+                        "Characteristic read failed for $uuid, error: $status"
+                    )
                 }
             }
         }
 
-    }
-
-    fun ByteArray.toHexString(): String =
-        joinToString(separator = " ", prefix = "0x") { String.format("%02X", it) }
-
-    private var isScanning = false
-//        set(value) {
-//            field = value
-//            runOnUiThread { binding.btnRealoadScanDevices.text = if (value) "Stop Scan" else "Start scan" }
-//        }
-
-    private fun BluetoothGatt.printGattTable() {
-        if (services.isEmpty()) {
-            Log.i("printGattTable", "No service and characteristic available, call discoverServices() first?")
-            return
-        }
-        services.forEach { service ->
-            val characteristicsTable = service.characteristics.joinToString(
-                separator = "n|--",
-                prefix = "|--"
-            ) { it.uuid.toString() }
-            Log.i("printGattTable", "nService ${service.uuid}nCharacteristics:n$characteristicsTable")
-        }
     }
 
     private fun readRfidId() {
@@ -217,57 +224,6 @@ class PairActivity : AppCompatActivity() {
         }
     }
 
-    private fun Activity.requestRelevantRuntimePermissions() {
-        if (hasRequiredBluetoothPermissions()) { return }
-        when {
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> {
-                requestLocationPermission()
-            }
-            else -> {
-                requestBluetoothPermission()
-            }
-        }
-    }
-
-    private fun requestLocationPermission() = runOnUiThread {
-        AlertDialog.Builder(this)
-            .setTitle("Location permission required")
-            .setMessage(
-                "Starting from Android M (6.0), the system requires apps to be granted " +
-                        "location access in order to scan for BLE devices."
-            )
-            .setCancelable(false)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    PERMISSION_REQUEST_CODE
-                )
-            }
-            .show()
-    }
-
-    private fun requestBluetoothPermission() = runOnUiThread {
-        AlertDialog.Builder(this)
-            .setTitle("Bluetooth permission required")
-            .setMessage(
-                "Starting from Android 12, the system requires apps to be granted " +
-                        "Bluetooth access in order to scan for and connect to BLE devices."
-            )
-            .setCancelable(false)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(
-                        Manifest.permission.BLUETOOTH_SCAN,
-                        Manifest.permission.BLUETOOTH_CONNECT
-                    ),
-                    PERMISSION_REQUEST_CODE
-                )
-            }
-            .show()
-    }
-
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
 
@@ -294,20 +250,6 @@ class PairActivity : AppCompatActivity() {
 
     }
 
-    private val scanSettings = ScanSettings.Builder()
-        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-        .setScanMode(ScanSettings.MATCH_MODE_STICKY)
-        .build()
-
-    private val bleScanner by lazy {
-        bluetoothAdapter.bluetoothLeScanner
-    }
-
-    private val bluetoothAdapter: BluetoothAdapter by lazy {
-        val bluetoothAdapter = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter.adapter
-    }
-
     private fun promptEnableBluetooth() {
         if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
             return
@@ -329,19 +271,6 @@ class PairActivity : AppCompatActivity() {
             Log.d("TEST", "BLUETOOTH IS NOT ENABLED")
             promptEnableBluetooth()
         }
-    }
-
-    fun BluetoothGattCharacteristic.isReadable(): Boolean =
-        containsProperty(BluetoothGattCharacteristic.PROPERTY_READ)
-
-    fun BluetoothGattCharacteristic.isWritable(): Boolean =
-        containsProperty(BluetoothGattCharacteristic.PROPERTY_WRITE)
-
-    fun BluetoothGattCharacteristic.isWritableWithoutResponse(): Boolean =
-        containsProperty(BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE)
-
-    fun BluetoothGattCharacteristic.containsProperty(property: Int): Boolean {
-        return properties and property != 0
     }
 
 }
