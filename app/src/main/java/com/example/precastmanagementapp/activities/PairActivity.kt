@@ -31,6 +31,7 @@ import com.example.precastmanagementapp.databinding.ActivityPairBinding
 import com.example.precastmanagementapp.hasPermission
 import com.example.precastmanagementapp.hasRequiredBluetoothPermissions
 import com.example.precastmanagementapp.requestRelevantRuntimePermissions
+import timber.log.Timber
 import java.util.UUID
 
 private const val PERMISSION_REQUEST_CODE = 1
@@ -63,7 +64,7 @@ class PairActivity : AppCompatActivity() {
                 stopBleScan()
             }
             with(result.device) {
-                Log.w("Connect", "Connecting to $address")
+                Timber.w("Connecting to $address")
                 ConnectionManager.connect(this, this@PairActivity)
             }
         }
@@ -76,6 +77,11 @@ class PairActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityPairBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -158,6 +164,10 @@ class PairActivity : AppCompatActivity() {
         }
     }
 
+    /*******************************************
+     * Callback bodies
+     *******************************************/
+    @SuppressLint("MissingPermission")
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val indexQuery = scanResults.indexOfFirst { it.device.address == result.device.address }
@@ -166,7 +176,7 @@ class PairActivity : AppCompatActivity() {
                 scanResultAdapter.notifyItemChanged(indexQuery)
             } else {
                 with (result.device) {
-                    Log.i("ScanCallback", "Found BLE device! Name ${name ?: "Unnamed"}, address: $address")
+                    Timber.i("Found BLE device! Name ${name ?: "Unnamed"}, address: $address")
                 }
                 scanResults.add(result)
                 scanResultAdapter.notifyItemInserted(scanResults.size - 1)
@@ -174,7 +184,7 @@ class PairActivity : AppCompatActivity() {
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.e("ScanCallback", "onScanFailed: code $errorCode")
+            Timber.e("onScanFailed: code $errorCode")
         }
     }
 

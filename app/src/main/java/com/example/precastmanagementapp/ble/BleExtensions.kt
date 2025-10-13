@@ -3,19 +3,20 @@ package com.example.precastmanagementapp.ble
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.util.Log
+import timber.log.Timber
 import java.util.UUID
 
 fun BluetoothGatt.printGattTable() {
     if (services.isEmpty()) {
-        Log.i("printGattTable", "No service and characteristic available, call discoverServices() first?")
+        Timber.i("No service and characteristic available, call discoverServices() first?")
         return
     }
     services.forEach { service ->
         val characteristicsTable = service.characteristics.joinToString(
-            separator = "n|--",
+            separator = "\n|--",
             prefix = "|--"
         ) { it.uuid.toString() }
-        Log.i("printGattTable", "nService ${service.uuid}nCharacteristics:n$characteristicsTable")
+        Timber.i("Service ${service.uuid}\nCharacteristics:\n$characteristicsTable")
     }
 }
 
