@@ -55,5 +55,4 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation("com.google.android.material:material:1.14.0-alpha01") // Material 3
-    implementation("com.jakewharton.timber:timber:5.0.1") // Timber log
 }

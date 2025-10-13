@@ -1,6 +1,7 @@
 package com.example.precastmanagementapp.activities
 
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGattCharacteristic
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
@@ -12,11 +13,14 @@ import com.example.precastmanagementapp.R
 import com.example.precastmanagementapp.ble.ConnectionEventListener
 import com.example.precastmanagementapp.ble.ConnectionManager
 import com.example.precastmanagementapp.ble.ConnectionManager.parcelableExtraCompat
+import com.example.precastmanagementapp.ble.isReadable
+import com.example.precastmanagementapp.ble.isWritable
 import com.example.precastmanagementapp.ble.toHexString
 import com.example.precastmanagementapp.databinding.ActivityScanBinding
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class ScanActivity : AppCompatActivity() {
 
@@ -26,6 +30,22 @@ class ScanActivity : AppCompatActivity() {
             ?: error("Missing BluetoothDevice from MainActivity!")
     }
     private val dateFormatter = SimpleDateFormat("MMM d, HH:mm:ss", Locale.US)
+
+    private val characteristics by lazy {
+        ConnectionManager.servicesOnDevice(device)?.flatMap { service ->
+            service.characteristics ?: listOf()
+        } ?: listOf()
+    }
+
+    private val characteristicProperties by lazy {
+        characteristics.associateWith { characteristic ->
+            mutableListOf<CharacteristicProperty>().apply {
+                if (characteristic.isReadable()) add(CharacteristicProperty.Readable)
+                if (characteristic.isWritable()) add(CharacteristicProperty.Writable)
+            }.toList()
+        }
+    }
+
     private var isScanningRfid = false
         set(value) {
             field = value
@@ -60,7 +80,14 @@ class ScanActivity : AppCompatActivity() {
                 startRfidScan()
             }
         }
+
+        val rfidIdCharUuid = UUID.fromString("00002a38-0000-1000-8000-00805f9b34fb")
+        val characteristic: BluetoothGattCharacteristic = characteristics.find { characteristic -> characteristic.uuid == rfidIdCharUuid } as BluetoothGattCharacteristic
+
         binding.btnBackScanActivity.setOnClickListener { finish() }
+        binding.btnStartScanTag.setOnClickListener {
+            ConnectionManager.readCharacteristic(device, characteristic)
+        }
     }
 
     override fun onDestroy() {
@@ -83,7 +110,6 @@ class ScanActivity : AppCompatActivity() {
             val uiText = binding.logTextView.text
             val currentLogText = uiText.ifEmpty { "Beginning of log." }
             binding.logTextView.text = "$currentLogText\n$formattedMessage"
-            binding.logScrollView.post { binding.logScrollView.fullScroll(View.FOCUS_DOWN) }
         }
     }
 
@@ -107,5 +133,22 @@ class ScanActivity : AppCompatActivity() {
                 log("Value changed on ${characteristic.uuid}: ${value.toHexString()}")
             }
         }
+    }
+
+    private enum class CharacteristicProperty {
+        Readable,
+        Writable,
+        WritableWithoutResponse,
+        Notifiable,
+        Indicatable;
+
+        val action
+            get() = when (this) {
+                Readable -> "Read"
+                Writable -> "Write"
+                WritableWithoutResponse -> "Write Without Response"
+                Notifiable -> "Toggle Notifications"
+                Indicatable -> "Toggle Indications"
+            }
     }
 }

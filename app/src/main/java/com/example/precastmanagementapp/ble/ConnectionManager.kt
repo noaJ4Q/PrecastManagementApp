@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.Intent
@@ -13,10 +14,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Parcelable
 import android.util.Log
-import timber.log.Timber
+import androidx.appcompat.widget.WithHint
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.math.sign
 
 @SuppressLint("MissingPermission")
 object ConnectionManager {
@@ -28,11 +30,14 @@ object ConnectionManager {
     private val operationQueue = ConcurrentLinkedQueue<BleOperationType>()
     private var pendingOperation: BleOperationType? = null
 
+    fun servicesOnDevice(device: BluetoothDevice): List<BluetoothGattService>? =
+        deviceGattMap[device]?.services
+
     fun registerListener(listener: ConnectionEventListener) {
         if (listeners.map { it.get() }.contains(listener)) { return }
         listeners.add(WeakReference(listener))
         listeners = listeners.filter { it.get() != null }.toMutableSet()
-        Timber.d("Added listener $listener, ${listeners.size} listeners total")
+        Log.d("Listener", "Added listener $listener, ${listeners.size} listeners total")
     }
 
     fun unregisterListener(listener: ConnectionEventListener) {
@@ -45,13 +50,13 @@ object ConnectionManager {
         }
         toRemove?.let {
             listeners.remove(it)
-            Timber.d("Removed listener ${it.get()}, ${listeners.size} listeners total")
+            Log.d("Listener", "Removed listener ${it.get()}, ${listeners.size} listeners total")
         }
     }
 
     fun connect(device: BluetoothDevice, context: Context) {
         if (device.isConnected()){
-            Timber.e("Already connected to ${device.address}!")
+            Log.e("Connect", "Already connected to ${device.address}!")
         } else {
             enqueueOperation(Connect(device, context.applicationContext))
         }
@@ -61,7 +66,17 @@ object ConnectionManager {
         if (device.isConnected()) {
             enqueueOperation(Disconnect(device))
         } else {
-            Timber.e("Not connected to ${device.address}, cannot teardown connection!")
+            Log.e("TeardownConnection", "Not connected to ${device.address}, cannot teardown connection!")
+        }
+    }
+
+    fun readCharacteristic(device: BluetoothDevice, characteristic: BluetoothGattCharacteristic) {
+        if (device.isConnected() && characteristic.isReadable()) {
+            enqueueOperation(CharacteristicRead(device, characteristic.uuid))
+        } else if (!characteristic.isReadable()) {
+            Log.e("ReadCharacteristic", "Attempting to read ${characteristic.uuid} that isn't readable!")
+        } else if (!device.isConnected()) {
+            Log.e("ReadCharacteristic", "Not connected to ${device.address}, cannot perform characteristic read")
         }
     }
 
@@ -75,7 +90,7 @@ object ConnectionManager {
 
     @Synchronized
     private fun signalEndOfOperation() {
-        Timber.d("End of $pendingOperation")
+        Log.d("OperationManagement", "End of $pendingOperation")
         pendingOperation = null
         if (operationQueue.isNotEmpty()){
             doNextOperation()
@@ -89,12 +104,12 @@ object ConnectionManager {
     @Synchronized
     private fun doNextOperation() {
         if (pendingOperation != null) {
-            Timber.e("doNextOperation() called when an operation is pending! Aborting.")
+            Log.e("OperationManagement", "doNextOperation() called when an operation is pending! Aborting.")
             return
         }
 
         val operation = operationQueue.poll() ?: run {
-            Timber.v("Operation queue empty, returning")
+            Log.v("OperationManagement", "Operation queue empty, returning")
             return
         }
 
@@ -103,7 +118,7 @@ object ConnectionManager {
         // Handle Connect separately from other operations that require device to be connected
         if (operation is Connect) {
             with(operation) {
-                Timber.w("Connecting to ${device.address}")
+                Log.w("Connect", "Connecting to ${device.address}")
                 device.connectGatt(context, false, callback)
             }
             return
@@ -112,10 +127,29 @@ object ConnectionManager {
         // Check BluetoothGatt availability for other operations
         val gatt = deviceGattMap[operation.device]
             ?: this@ConnectionManager.run {
-                Timber.e("Not connected to ${operation.device.address}! Aborting $operation operation.")
+                Log.e("Connect", "Not connected to ${operation.device.address}! Aborting $operation operation.")
                 signalEndOfOperation()
                 return
             }
+
+        when (operation) {
+            is Disconnect -> with(operation) {
+                Log.w("Disconnect", "Disconnecting from ${device.address}")
+                gatt.close()
+                deviceGattMap.remove(device)
+                listenersAsSet.forEach { it.get()?.onDisconnect?.invoke(device) }
+                signalEndOfOperation()
+            }
+            is CharacteristicRead -> with(operation) {
+                gatt.findCharacteristic(characteristicUuid)?.let { characteristic ->
+                    gatt.readCharacteristic(characteristic)
+                } ?: this@ConnectionManager.run {
+                    Log.e("CharacteristicRead", "Cannot find $characteristicUuid to read from ")
+                    signalEndOfOperation()
+                }
+            }
+            else -> error("Unsupported operation: $operation")
+        }
     }
 
     private val callback = object : BluetoothGattCallback() {
@@ -124,17 +158,17 @@ object ConnectionManager {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothGatt.STATE_CONNECTED) {
-                    Timber.w("onConnectionStateChanged: connected to $deviceAddress")
+                    Log.w("BluetoothGattCallback", "onConnectionStateChanged: connected to $deviceAddress")
                     deviceGattMap[gatt.device] = gatt
                     Handler(Looper.getMainLooper()).post {
                         gatt.discoverServices()
                     }
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                    Timber.e("onConnectionStateChange: disconnected from $deviceAddress")
+                    Log.e("BluetoothGattCallback", "onConnectionStateChange: disconnected from $deviceAddress")
                     teardownConnection(gatt.device)
                 }
             } else {
-                Timber.e("onConnectionStateChange: status $status encountered for $deviceAddress")
+                Log.e("BluetoothGattCallback", "onConnectionStateChange: status $status encountered for $deviceAddress")
                 if (pendingOperation is Connect) {
                     signalEndOfOperation()
                 }
@@ -145,12 +179,12 @@ object ConnectionManager {
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             with(gatt) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    Timber.w("Discovered ${services.size} services for ${device.address}")
+                    Log.w("BluetoothGattCallback", "Discovered ${services.size} services for ${device.address}")
                     printGattTable()
 //                    requestMtu(device, GATT_MAX_MTU_SIZE)
                     listenersAsSet.forEach { it.get()?.onConnectionSetupComplete?.invoke(this)}
                 } else {
-                    Timber.e("Service discovery failed due to status $status")
+                    Log.e("BluetoothGattCallback", "Service discovery failed due to status $status")
                     teardownConnection(gatt.device)
                 }
             }
@@ -171,16 +205,16 @@ object ConnectionManager {
             val uuid = characteristic.uuid
             when (status) {
                 BluetoothGatt.GATT_SUCCESS -> {
-                    Timber.i("Read characteristic $uuid | value: ${value.toHexString()}")
+                    Log.i("BluetoothGattCallback", "Read characteristic $uuid | value: ${value.toHexString()}")
                     listenersAsSet.forEach {
                         it.get()?.onCharacteristicRead?.invoke(gatt.device, characteristic, value)
                     }
                 }
                 BluetoothGatt.GATT_READ_NOT_PERMITTED -> {
-                    Timber.e("Read not permitted for $uuid!")
+                    Log.e("BluetoothGattCallback", "Read not permitted for $uuid!")
                 }
                 else -> {
-                    Timber.e("Characteristic read failed for $uuid, error: $status")
+                    Log.e("BluetoothGattCallback", "Characteristic read failed for $uuid, error: $status")
                 }
             }
 
