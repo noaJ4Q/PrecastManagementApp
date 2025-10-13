@@ -70,8 +70,6 @@ class PairActivity : AppCompatActivity() {
         }
     }
 
-    private lateinit var bluetoothGatt: BluetoothGatt
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -92,9 +90,6 @@ class PairActivity : AppCompatActivity() {
         binding.btnRealoadScanDevices.setOnClickListener {
             stopBleScan()
             startBleScan()
-        }
-        binding.imageView4.setOnClickListener {
-            readRfidId()
         }
 
         setupRecyclerView()
@@ -132,19 +127,6 @@ class PairActivity : AppCompatActivity() {
     private fun stopBleScan() {
         bleScanner.stopScan(scanCallback)
         isScanning = false
-    }
-
-    private fun readRfidId() {
-//        val rfidIdServiceUuid = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
-//        val rfidIdCharUuid = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
-        val rfidIdServiceUuid = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
-        val rfidIdCharUuid = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
-        val rfidIdChar = bluetoothGatt
-            .getService(rfidIdServiceUuid)?.getCharacteristic(rfidIdCharUuid)
-
-        if (rfidIdChar?.isReadable() == true) {
-            bluetoothGatt.readCharacteristic(rfidIdChar)
-        }
     }
 
     private fun setupRecyclerView() {
@@ -230,9 +212,9 @@ class PairActivity : AppCompatActivity() {
     ) {
         result ->
         if (result.resultCode == RESULT_OK) {
-            Log.d("TEST", "BLUETOOTH ENABLED")
+            Timber.i("Bluetooth is enabled, good to go")
         } else {
-            Log.d("TEST", "BLUETOOTH IS NOT ENABLED")
+            Timber.i("User dismissed or denied Bluetooth prompt")
             promptEnableBluetooth()
         }
     }
