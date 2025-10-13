@@ -2,39 +2,36 @@ package com.example.precastmanagementapp.activities
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import com.example.precastmanagementapp.BuildConfig
 import com.example.precastmanagementapp.R
 import com.example.precastmanagementapp.ScanResultAdapter
+import com.example.precastmanagementapp.ble.ConnectionEventListener
 import com.example.precastmanagementapp.ble.ConnectionManager
 import com.example.precastmanagementapp.ble.isReadable
-import com.example.precastmanagementapp.ble.printGattTable
-import com.example.precastmanagementapp.ble.toHexString
 import com.example.precastmanagementapp.databinding.ActivityPairBinding
 import com.example.precastmanagementapp.hasPermission
 import com.example.precastmanagementapp.hasRequiredBluetoothPermissions
 import com.example.precastmanagementapp.requestRelevantRuntimePermissions
+import timber.log.Timber
 import java.util.UUID
 
 private const val PERMISSION_REQUEST_CODE = 1
@@ -67,8 +64,7 @@ class PairActivity : AppCompatActivity() {
                 stopBleScan()
             }
             with(result.device) {
-                Log.w("ScanResultAdapter", "Connecting to $address")
-//                connectGatt(this@PairActivity, false, gattCallback)
+                Timber.w("Connecting to $address")
                 ConnectionManager.connect(this, this@PairActivity)
             }
         }
@@ -81,6 +77,9 @@ class PairActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityPairBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -88,12 +87,10 @@ class PairActivity : AppCompatActivity() {
         }
 
         binding.btnBackPairActivity.setOnClickListener { finish() }
-
         binding.btnRealoadScanDevices.setOnClickListener {
             stopBleScan()
             startBleScan()
         }
-
         binding.imageView4.setOnClickListener {
             readRfidId()
         }
@@ -103,15 +100,20 @@ class PairActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        ConnectionManager.registerListener(connectionEventListener)
         if (!bluetoothAdapter.isEnabled) {
             promptEnableBluetooth()
+        } else {
+            startBleScan()
         }
-        startBleScan()
     }
 
     override fun onPause() {
         super.onPause()
-        stopBleScan()
+        if (isScanning) {
+            stopBleScan()
+        }
+        ConnectionManager.unregisterListener(connectionEventListener)
     }
 
     private fun startBleScan() {
@@ -128,70 +130,6 @@ class PairActivity : AppCompatActivity() {
     private fun stopBleScan() {
         bleScanner.stopScan(scanCallback)
         isScanning = false
-    }
-
-    private val gattCallback = object : BluetoothGattCallback() {
-        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            val deviceAddress = gatt.device.address
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    Log.w("BluetoothGattCallback", "Successfully connected to $deviceAddress")
-                    bluetoothGatt = gatt
-                    Handler(Looper.getMainLooper()).post {
-                        bluetoothGatt?.discoverServices()
-                    }
-                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                    Log.w("BluetoothGattCallback", "Successfully disconnected from $deviceAddress")
-                    gatt.close()
-                }
-            } else {
-                Log.w(
-                    "BluetoothGattCallback",
-                    "Error $status encountered for $deviceAddress! Disconnecting..."
-                )
-                gatt.close()
-            }
-        }
-
-        override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            with(gatt) {
-                Log.w(
-                    "BluetoothCallback",
-                    "Discovered ${services.size} services for ${device.address}"
-                )
-                printGattTable()
-            }
-        }
-
-        override fun onCharacteristicRead(
-            gatt: BluetoothGatt,
-            characteristic: BluetoothGattCharacteristic,
-            value: ByteArray,
-            status: Int
-        ) {
-            val uuid = characteristic.uuid
-            when (status) {
-                BluetoothGatt.GATT_SUCCESS -> {
-                    val rfidId = value.first().toInt() and 0xFF
-                    Log.i(
-                        "BluetoothGattCallback",
-                        "Read characteristic $uuid:n${value.toHexString()} | $rfidId"
-                    )
-                }
-
-                BluetoothGatt.GATT_READ_NOT_PERMITTED -> {
-                    Log.e("BluetoothGattCallback", "Read not permitted for $uuid!")
-                }
-
-                else -> {
-                    Log.e(
-                        "BluetoothGattCallback",
-                        "Characteristic read failed for $uuid, error: $status"
-                    )
-                }
-            }
-        }
-
     }
 
     private fun readRfidId() {
@@ -226,18 +164,13 @@ class PairActivity : AppCompatActivity() {
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-
-            with(result.device) {
-                Log.i("ScanCallback", "Found BLE device! Name: ${name ?: "Unnamed"}, address: $address")
-            }
-
             val indexQuery = scanResults.indexOfFirst { it.device.address == result.device.address }
             if (indexQuery != -1) { // A scan result already exists with the same address
                 scanResults[indexQuery] = result
                 scanResultAdapter.notifyItemChanged(indexQuery)
             } else {
                 with (result.device) {
-                    Log.i("ScanCallback", "Found BLE device! Name ${name ?: "Unnamed"}, address: $address")
+                    Timber.i("Found BLE device! Name ${name ?: "Unnamed"}, address: $address")
                 }
                 scanResults.add(result)
                 scanResultAdapter.notifyItemInserted(scanResults.size - 1)
@@ -245,9 +178,35 @@ class PairActivity : AppCompatActivity() {
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.e("ScanCallback", "onScanFailed: code $errorCode")
+            Timber.e("onScanFailed: code $errorCode")
         }
+    }
 
+    private val connectionEventListener by lazy {
+        ConnectionEventListener().apply {
+            onConnectionSetupComplete = { gatt ->
+                Timber.tag("TEST").d("PRE-INIT ACTIVITY SCAN_ACTIVITY")
+                Intent(this@PairActivity, ScanActivity::class.java).also {
+                    it.putExtra(BluetoothDevice.EXTRA_DEVICE, gatt.device)
+                    startActivity(it)
+                }
+            }
+
+            onDisconnect = {
+                val deviceName = if (hasRequiredBluetoothPermissions()) {
+                    it.name
+                } else {
+                    "device"
+                }
+                runOnUiThread {
+                    AlertDialog.Builder(this@PairActivity)
+                        .setTitle("Disconnected")
+                        .setMessage("Disconnected or unable to connect to device $deviceName")
+                        .setPositiveButton("Ok", null)
+                        .show()
+                }
+            }
+        }
     }
 
     private fun promptEnableBluetooth() {

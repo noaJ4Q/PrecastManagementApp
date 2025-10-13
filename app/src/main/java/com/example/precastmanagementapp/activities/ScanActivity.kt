@@ -1,21 +1,31 @@
 package com.example.precastmanagementapp.activities
 
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothDevice
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.precastmanagementapp.R
+import com.example.precastmanagementapp.ble.ConnectionEventListener
+import com.example.precastmanagementapp.ble.ConnectionManager
+import com.example.precastmanagementapp.ble.ConnectionManager.parcelableExtraCompat
+import com.example.precastmanagementapp.ble.toHexString
 import com.example.precastmanagementapp.databinding.ActivityScanBinding
-import com.example.precastmanagementapp.extensions.isReadable
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class ScanActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityScanBinding
+    private val device: BluetoothDevice by lazy {
+        intent.parcelableExtraCompat(BluetoothDevice.EXTRA_DEVICE)
+            ?: error("Missing BluetoothDevice from MainActivity!")
+    }
+    private val dateFormatter = SimpleDateFormat("MMM d, HH:mm:ss", Locale.US)
     private var isScanningRfid = false
         set(value) {
             field = value
@@ -31,7 +41,10 @@ class ScanActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ConnectionManager.registerListener(connectionEventListener)
+
         binding = ActivityScanBinding.inflate(layoutInflater)
+
         enableEdgeToEdge()
         setContentView(binding.root)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -46,12 +59,14 @@ class ScanActivity : AppCompatActivity() {
             } else {
                 startRfidScan()
             }
-            // SEND "ENABLE SCAN" MESSAGE TO SCANNER
-            // SWITCH TO STOP SCAN BUTTON
-            // SHOW LOADING
         }
-
         binding.btnBackScanActivity.setOnClickListener { finish() }
+    }
+
+    override fun onDestroy() {
+        ConnectionManager.unregisterListener(connectionEventListener)
+        ConnectionManager.teardownConnection(device)
+        super.onDestroy()
     }
 
     private fun startRfidScan(){
@@ -62,4 +77,35 @@ class ScanActivity : AppCompatActivity() {
         isScanningRfid = false
     }
 
+    private fun log(message: String) {
+        val formattedMessage = "${dateFormatter.format(Date())}: $message"
+        runOnUiThread {
+            val uiText = binding.logTextView.text
+            val currentLogText = uiText.ifEmpty { "Beginning of log." }
+            binding.logTextView.text = "$currentLogText\n$formattedMessage"
+            binding.logScrollView.post { binding.logScrollView.fullScroll(View.FOCUS_DOWN) }
+        }
+    }
+
+    private val connectionEventListener by lazy {
+        ConnectionEventListener().apply {
+            onDisconnect = {
+                runOnUiThread {
+                    AlertDialog.Builder(this@ScanActivity)
+                        .setTitle("Disconnected")
+                        .setMessage("Disconnected from device.")
+                        .setPositiveButton("OK") { _, _ -> onBackPressed() }
+                        .show()
+                }
+            }
+
+            onCharacteristicRead = { _, characteristic, value ->
+                log("Read from ${characteristic.uuid}: ${value.toHexString()}")
+            }
+
+            onCharacteristicChanged = { _, characteristic, value ->
+                log("Value changed on ${characteristic.uuid}: ${value.toHexString()}")
+            }
+        }
+    }
 }
