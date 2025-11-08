@@ -81,7 +81,9 @@ class ScanActivity : AppCompatActivity() {
             }
         }
 
-        val rfidIdCharUuid = UUID.fromString("00002a38-0000-1000-8000-00805f9b34fb")
+//        beb5483e-36e1-4688-b7f5-ea07361b26a8 RFID scanner
+//        00002a38-0000-1000-8000-00805f9b34fb Body sensor location (Heart Rate)
+        val rfidIdCharUuid = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
         val characteristic: BluetoothGattCharacteristic = characteristics.find { characteristic -> characteristic.uuid == rfidIdCharUuid } as BluetoothGattCharacteristic
 
         binding.btnBackScanActivity.setOnClickListener { finish() }
@@ -130,7 +132,9 @@ class ScanActivity : AppCompatActivity() {
             }
 
             onCharacteristicChanged = { _, characteristic, value ->
-                log("Value changed on ${characteristic.uuid}: ${value.toHexString()}")
+                val hexString = value.toHexString()
+                val textString = String(value, Charsets.UTF_8)
+                log("Value changed on ${characteristic.uuid}: ${textString}")
             }
         }
     }
