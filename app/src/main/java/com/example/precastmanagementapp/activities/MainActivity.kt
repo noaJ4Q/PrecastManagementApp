@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.precastmanagementapp.R
+import com.example.precastmanagementapp.activities.ReviewActivity
 import com.example.precastmanagementapp.activities.ScanActivity
 import com.example.precastmanagementapp.databinding.ActivityMainBinding
 
@@ -27,6 +28,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.cvScanTag.setOnClickListener {
             val intent = Intent(this, ScanActivity::class.java)
+            startActivity(intent)
+        }
+
+        binding.cvReviewInformation.setOnClickListener {
+            val intent = Intent(this, ReviewActivity::class.java)
             startActivity(intent)
         }
 

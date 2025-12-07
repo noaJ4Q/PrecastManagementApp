@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -56,4 +57,7 @@ dependencies {
 
     implementation("com.google.android.material:material:1.14.0-alpha01") // Material 3
     implementation("com.jakewharton.timber:timber:5.0.1") // Timber log
+
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0")) // Import the Firebase BoM
+    implementation("com.google.firebase:firebase-firestore") // Cloud Firestore library
 }

@@ -10,8 +10,8 @@ import androidx.recyclerview.widget.RecyclerView
 class ScanResultAdapter(
     private val items: List<ScanResult>,
     private val onClickListener: ((device: ScanResult) -> Unit)
-) :
-    RecyclerView.Adapter<ScanResultAdapter.ViewHolder>(){
+) : RecyclerView.Adapter<ScanResultAdapter.ViewHolder>()
+{
 
     // Create new view
     override fun onCreateViewHolder(
@@ -45,7 +45,6 @@ class ScanResultAdapter(
             view.findViewById<TextView>(R.id.tvDeviceSignal).text = "${result.rssi} dBm"
             view.setOnClickListener { onclickListener.invoke(result) }
         }
-
 
     }
 }

@@ -33,7 +33,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PrecastManagementApp">
         <activity
-            android:name=".ReviewActivity"
+            android:name=".activities.EditElementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.ReviewActivity"
             android:exported="false" />
         <activity
             android:name=".activities.ScanActivity"

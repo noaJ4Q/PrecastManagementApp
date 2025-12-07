@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "960557252606",
+    "project_id": "precastmanagement-7edec",
+    "storage_bucket": "precastmanagement-7edec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960557252606:android:24cb8dcedc46a11a1b8aaf",
+        "android_client_info": {
+          "package_name": "com.example.precastmanagementapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbfpqnFPATa80BkjC8oY70OEeZW0s9Ors"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
