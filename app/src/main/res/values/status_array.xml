@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="status_array">
+        <item>On fabric</item>
+        <item>On transit</item>
+        <item>On site</item>
+        <item>Installed</item>
+    </string-array>
+</resources>

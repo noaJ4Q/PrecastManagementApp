@@ -1,5 +1,6 @@
 package com.example.precastmanagementapp.activities
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -11,7 +12,6 @@ import com.example.precastmanagementapp.BuildConfig
 import com.example.precastmanagementapp.ElementResultAdapter
 import com.example.precastmanagementapp.PrecastElement
 import com.example.precastmanagementapp.R
-import com.example.precastmanagementapp.databinding.ActivityMainBinding
 import com.example.precastmanagementapp.databinding.ActivityReviewBinding
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
@@ -80,6 +80,8 @@ class ReviewActivity : AppCompatActivity() {
     }
 
     private fun onElementClicked(element: PrecastElement){
-        // TODO: GA
+        val intent = Intent(this, EditElementActivity::class.java)
+        intent.putExtra("element", element)
+        startActivity(intent)
     }
 }
