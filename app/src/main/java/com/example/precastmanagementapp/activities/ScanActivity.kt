@@ -111,7 +111,12 @@ class ScanActivity : AppCompatActivity() {
         runOnUiThread {
             val uiText = binding.logTextView.text
             val currentLogText = uiText.ifEmpty { "Beginning of log." }
-            binding.logTextView.text = "$currentLogText\n$formattedMessage"
+            binding.liScanTag.visibility = View.INVISIBLE
+            binding.logTextView.visibility = View.VISIBLE
+//            binding.logTextView.text = "$currentLogText\n$formattedMessage"
+            // get rid of 9 last characters of message
+            val message = message.substring(0, message.length - 9)
+            binding.logTextView.text = "Detected tag:\n$message"
         }
     }
 
@@ -128,7 +133,9 @@ class ScanActivity : AppCompatActivity() {
             }
 
             onCharacteristicRead = { _, characteristic, value ->
-                log("Read from ${characteristic.uuid}: ${value.toHexString()}")
+//                log("Read from ${characteristic.uuid}: ${value.toHexString()}")
+//                log("Read from ${characteristic.uuid}: ${value.decodeToString()}")
+                log(value.decodeToString())
             }
 
             onCharacteristicChanged = { _, characteristic, value ->
